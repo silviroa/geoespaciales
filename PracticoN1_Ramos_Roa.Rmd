@@ -16,6 +16,8 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 library(sf)
 library(leaflet)
+library(readxl)
+library(xtable)
 ```
 
 # El Sistema de Referencia/Contrarreferencia y la Regionalización Sanitaria
@@ -28,21 +30,21 @@ El **Sistema de Referencia y Contrarreferencia** es el mecanismo administrativo 
 
 Para que este flujo sea eficiente, el territorio se organiza en Regiones Sanitarias. En la Provincia de Neuquén, la regionalización sanitaria ha sido históricamente un pilar del renombrado Plan de Salud de Neuquén (iniciado formalmente en la década de 1970). Esta división territorial no es solo un límite administrativo; busca equidad, accesibilidad geográfica y optimización de recursos, distribuyendo hospitales de distinta complejidad (desde puestos sanitarios hasta el Hospital Provincial Neuquén Dr. Eduardo Castro Rendón) estratégicamente sobre la geografía neuquina.
 
-
-[@pelaez2021sistemas] 
-[@cdi2026sre3] 
-[@rovere1999redes] 
-[@andesPlataforma]
-[@saludnqnRED]
-[@neuquen2024decreto1663]
-[@neuquenLey2977]
-
+[@pelaez2021sistemas] [@cdi2026sre3] [@rovere1999redes] [@andesPlataforma] [@saludnqnRED] [@neuquen2024decreto1663] [@neuquenLey2977]
 
 ## Importación de datos Geoespaciales
 
 ### Mapa de Regiones Sanitarias de la Provincia de Neuquén
 
-[@minsaludnqn2024zonas]
+El territorio de la provincia se divide en regiones sanitarias. Es un modelo organizacional regionalizado e integrado, compuesto por una red de establecimientos escalonados es niveles de complejidad creciente agrupados en siete Regiones Sanitarias. A continuación, se listan cada una de las regiones con los Municipios y Comisiones de Fomento que nuclean.
+
+**Alto Neuquén**: Chos Malal, Andacollo, Las Ovejas, Loncopué, El Cholar, El Huecú, Huinganco, Los Miches, Taquimilán, Tricao Malal, Caviahue, Copahue, Chorriaca, Coyuco Cochico, Los Guañacos, Manzano Amargo, Varvarco – Invernada Vieja, Villa del Nahueve, Villa del Curi Leuvú,
+**De la Comarca**: Cutral Co, Plaza Huincul, Sauzal Bonito. Confluencia: Neuquén capital, Plottier, Senillosa, Centenario, Villa El Chocón, Vista Alegre, Arroyito. 
+**Del Limay* **: Picún Leufú, Piedra del Águila, El Sauce, Paso aguerre, Santo Tomas. del Pehuén: Zapala, Aluminé, Las Lajas, Mariano Moreno, Villa Pehuenia, Moquehue, Bajada del Agrio, Las Coloradas, Covunco, Los Catutos, Quili Malal, Ramón Castro, Villa del Puente Picún Leufú. 
+**De los Lagos del Sur**: Junín de los Andes, San Martín de los Andes, Villa la Angostura, Villa Lago Meliquina, Villa Traful, Pilo Lil. 
+**Vaca Muerta**: San Patricio del Chañar, Rincón de los Sauces, Buta Ranquil, Añelo, Barrancas, Octavio Pico, Aguada San Roque, Los Chihuidos.
+
+Cada región sanitaria brinda el servicio de salud a través de un Hospital de Referencia Provincial de máxima complejidad, que es de referencia interregional y regional, teniendo cada uno de ellos una delimitación geográfica de población a cargo abordando del primer al tercer nivel de atención. [@minsaludnqn2024zonas]
 
 ```{r}
 regiones <- st_read("files/regiones/regiones.shp")
@@ -56,6 +58,19 @@ leaflet(regiones) |>
   )
 
 ```
+### Campos incluidos en el dataset
+
+
+```{r echo = FALSE, warning=FALSE,  results = 'asis'}
+
+# Leemos el excel con la descripción de los campos
+mis_datos <- read_excel("files/regiones.xlsx")
+
+print(xtable(mis_datos, caption = "DataSet de regiones"), type = "html")
+```
+
+
+
 
 ### Mapa de Establecimientos de Salud de la Provincia de Neuquén
 
