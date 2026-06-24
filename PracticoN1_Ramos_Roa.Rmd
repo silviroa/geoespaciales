@@ -1,0 +1,75 @@
+---
+title: "Práctica: Aplicaciones de Minería con Datos Geográficos"
+date: "18-06-2026"
+author: "Ramos Celeste - Roa Silvina"
+bibliography: references.bib
+biblio-style: apalike
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(sf)
+library(leaflet)
+```
+
+# El Sistema de Referencia/Contrarreferencia y la Regionalización Sanitaria
+
+El **Sistema de Referencia y Contrarreferencia** es el mecanismo administrativo y asistencial que articula los diferentes niveles de atención de la red de salud para garantizar la continuidad del cuidado de los pacientes. [@ops2010riss]
+
+**Referencia**: Es el envío de un paciente (o elementos de ayuda diagnóstica) desde un centro de menor complejidad a uno de mayor capacidad resolutiva.
+
+**Contrarreferencia**: Es la devolución del paciente al centro de origen (generalmente de atención primaria) con el diagnóstico, tratamiento efectuado e indicaciones de seguimiento.
+
+Para que este flujo sea eficiente, el territorio se organiza en Regiones Sanitarias. En la Provincia de Neuquén, la regionalización sanitaria ha sido históricamente un pilar del renombrado Plan de Salud de Neuquén (iniciado formalmente en la década de 1970). Esta división territorial no es solo un límite administrativo; busca equidad, accesibilidad geográfica y optimización de recursos, distribuyendo hospitales de distinta complejidad (desde puestos sanitarios hasta el Hospital Provincial Neuquén Dr. Eduardo Castro Rendón) estratégicamente sobre la geografía neuquina.
+
+
+[@pelaez2021sistemas] 
+[@cdi2026sre3] 
+[@rovere1999redes] 
+[@andesPlataforma]
+[@saludnqnRED]
+[@neuquen2024decreto1663]
+[@neuquenLey2977]
+
+
+## Importación de datos Geoespaciales
+
+### Mapa de Regiones Sanitarias de la Provincia de Neuquén
+
+[@minsaludnqn2024zonas]
+
+```{r}
+regiones <- st_read("files/regiones/regiones.shp")
+leaflet(regiones) |>
+  addTiles() |>
+  addPolygons(
+    color = "black",
+    weight = 1,
+    fillColor = "steelblue",
+    fillOpacity = 0.6
+  )
+
+```
+
+### Mapa de Establecimientos de Salud de la Provincia de Neuquén
+
+[@sisa2026refes]
+
+```{r}
+establecimientos <- st_read("files/establecimientos/establecimientos.shp")
+
+leaflet(establecimientos) |>
+  addProviderTiles("CartoDB.Positron") |>
+  addCircleMarkers(
+    radius = 4,
+    color = "blue"
+  )
+```
+
+## Referencias
