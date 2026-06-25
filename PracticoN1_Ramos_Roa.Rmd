@@ -18,6 +18,7 @@ library(sf)
 library(leaflet)
 library(readxl)
 library(xtable)
+library(ggplot2)
 ```
 
 # El Sistema de Referencia/Contrarreferencia y la Regionalización Sanitaria
@@ -39,9 +40,13 @@ Para que este flujo sea eficiente, el territorio se organiza en Regiones Sanitar
 El territorio de la provincia se divide en regiones sanitarias. Es un modelo organizacional regionalizado e integrado, compuesto por una red de establecimientos escalonados es niveles de complejidad creciente agrupados en siete Regiones Sanitarias. A continuación, se listan cada una de las regiones con los Municipios y Comisiones de Fomento que nuclean.
 
 **Alto Neuquén**: Chos Malal, Andacollo, Las Ovejas, Loncopué, El Cholar, El Huecú, Huinganco, Los Miches, Taquimilán, Tricao Malal, Caviahue, Copahue, Chorriaca, Coyuco Cochico, Los Guañacos, Manzano Amargo, Varvarco – Invernada Vieja, Villa del Nahueve, Villa del Curi Leuvú,
+
 **De la Comarca**: Cutral Co, Plaza Huincul, Sauzal Bonito. Confluencia: Neuquén capital, Plottier, Senillosa, Centenario, Villa El Chocón, Vista Alegre, Arroyito. 
+
 **Del Limay* **: Picún Leufú, Piedra del Águila, El Sauce, Paso aguerre, Santo Tomas. del Pehuén: Zapala, Aluminé, Las Lajas, Mariano Moreno, Villa Pehuenia, Moquehue, Bajada del Agrio, Las Coloradas, Covunco, Los Catutos, Quili Malal, Ramón Castro, Villa del Puente Picún Leufú. 
+
 **De los Lagos del Sur**: Junín de los Andes, San Martín de los Andes, Villa la Angostura, Villa Lago Meliquina, Villa Traful, Pilo Lil. 
+
 **Vaca Muerta**: San Patricio del Chañar, Rincón de los Sauces, Buta Ranquil, Añelo, Barrancas, Octavio Pico, Aguada San Roque, Los Chihuidos.
 
 Cada región sanitaria brinda el servicio de salud a través de un Hospital de Referencia Provincial de máxima complejidad, que es de referencia interregional y regional, teniendo cada uno de ellos una delimitación geográfica de población a cargo abordando del primer al tercer nivel de atención. [@minsaludnqn2024zonas]
@@ -58,17 +63,16 @@ leaflet(regiones) |>
   )
 
 ```
-### Campos incluidos en el dataset
+### Campos incluidos en el dataset "Regiones"
 
 
 ```{r echo = FALSE, warning=FALSE,  results = 'asis'}
 
 # Leemos el excel con la descripción de los campos
-mis_datos <- read_excel("files/regiones.xlsx")
+campos_regiones <- read_excel("files/regiones.xlsx")
+print(xtable(campos_regiones, caption = "DataSet de regiones"), type = "html")
 
-print(xtable(mis_datos, caption = "DataSet de regiones"), type = "html")
 ```
-
 
 
 
@@ -86,5 +90,76 @@ leaflet(establecimientos) |>
     color = "blue"
   )
 ```
+
+### Campos incluidos en el dataset "Establecimientos"
+
+```{r echo = FALSE, warning=FALSE,  results = 'asis'}
+
+# Leemos el excel con la descripción de los campos
+campos_establecimientos <- read_excel("files/establecimientos.xlsx")
+print(xtable(campos_establecimientos, caption = "DataSet de establecimientos"), type = "html")
+
+```
+
+## Análisis exploratorio de los dataset
+
+### Análisis de dataSet de regiones
+
+Resumen de variables del dataset
+
+```{r}
+summary(regiones)
+
+```
+
+Gráfico de barras para comparar regiones
+```{r}
+
+# Gráfico de barras para comparar regiones
+ggplot(regiones, aes(x = reorder(region, area_km2), y = area_km2)) +
+  geom_col(fill = "steelblue", alpha = 0.9) +
+  coord_flip() + # Da vuelta el gráfico para leer bien los nombres de las regiones
+  labs(
+    title = "Comparación de Superficie por Región Sanitaria",
+    subtitle = "Análisis territorial del sistema de salud",
+    x = "Región Sanitaria",
+    y = "Superficie (en km²)"
+  ) +
+  theme_minimal()
+```
+### Análisis de dataSet de establecimientos
+
+Resumen de variables del dataset
+
+```{r}
+summary(establecimientos)
+
+```
+
+
+```{r}
+
+# Gráfico de barras para la variable tipo de establecimiento
+ggplot(establecimientos, aes(x = factor(gna))) +
+  geom_bar(fill = "green", color = "white", width = 0.6) +
+  labs(
+    title = "Distribución de los Efectores según tipo de establecimiento",
+    x = "Tipo de establecimiento",
+    y = "Frecuencia Absoluta"
+  ) +
+  theme_minimal()
+
+# Gráfico de barras para la variable Complejidad
+ggplot(establecimientos, aes(x = factor(complej))) +
+  geom_bar(fill = "coral", color = "white", width = 0.6) +
+  labs(
+    title = "Distribución de los Efectores según su Nivel de Complejidad",
+    subtitle = "Evidencia de la jerarquía del sistema de salud",
+    x = "Nivel de Complejidad",
+    y = "Frecuencia Absoluta"
+  ) +
+  theme_minimal()
+```
+
 
 ## Referencias
