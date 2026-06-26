@@ -19,6 +19,7 @@ library(leaflet)
 library(readxl)
 library(xtable)
 library(ggplot2)
+library(dplyr)
 ```
 
 # El Sistema de Referencia/Contrarreferencia y la Regionalización Sanitaria
@@ -161,10 +162,20 @@ ggplot(establecimientos, aes(x = factor(complej))) +
   theme_minimal()
 ```
 
-## Mapa 
+## Mapa Sanitario de Neuquén
 
 
 ```{r}
+
+regiones <- mutate(regiones,colorfondo=case_when(
+  region=="Región de la Comarca"~"red",
+  region=="Región Confluencia"~"blue",
+  region=="Región del Limay"~"yellow",
+  region=="Región Alto Neuquén"~"orange",
+  region=="Región de los Lagos del Sur"~"green",
+  region=="Región Vaca Muerta"~"purple",
+  region=="Región del Pehuén"~"violet"
+))
 
 mapa_base_IGNG <- leaflet()%>% 
   addTiles('https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png') %>%
@@ -179,14 +190,31 @@ addPolygons(
     data = regiones,
     color = "blue",
     weight = 2,
-    fillColor = "steelblue",
-    fillOpacity = 0.6
+    fillColor = ~colorfondo,
+    fillOpacity = 0.3,
+    group="Regiones Sanitarias"
   ) %>%
- addMarkers(data=establecimientos, popup=~fna)
+ addMarkers(data=establecimientos, popup=~fna, group="Establecimientos")%>% 
+ addLayersControl(overlayGroups = c("Regiones Sanitarias","Establecimientos"))%>%
+ addLegend(
+    position = "bottomright",
+    colors = regiones$colorfondo,
+    labels = regiones$region,
+    title = "Regiones Sanitarias"
+  )
+    
+    
 mapa_base_IGNG
 
 ```
 
+
+
+## Analisando datos de referencia y contrareferencia
+
+```{r}
+
+```
 
 
 ## Referencias
