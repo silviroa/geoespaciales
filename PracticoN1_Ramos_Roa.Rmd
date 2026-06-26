@@ -216,9 +216,11 @@ mapa_base_IGNG
 ```{r}
 datos_solicitudes <- read_csv("files/listado-solicitudes_2026.csv")
 
-
-# Eliminamos datos sensibles
+# Transformaciones de datos 
+# Eliminamos datos sensibles y convertimos tipos
 datos_solicitudes <- select(datos_solicitudes,-idPrestacion,-idPaciente)
+datos_solicitudes$EfectorSISAOrigen <- as.character(datos_solicitudes$EfectorSISAOrigen)
+datos_solicitudes$EfectorSISADestino <- as.character(datos_solicitudes$EfectorSISADestino)
 
 # Agregamos una columna booleana que indique si la solicitud esta finalizada, según el estadoActual
 # Si el estadoActual es "validada", "rechazada", "vencida" se considera finalizada, en caso contrario estaría sin finalizar
@@ -226,21 +228,61 @@ datos_solicitudes <- select(datos_solicitudes,-idPrestacion,-idPaciente)
 datos_solicitudes <- mutate(datos_solicitudes,
                              finalizada=ifelse(estadoActual=="validada" | estadoActual=="rechazada" | estadoActual=="vencida" ,TRUE,FALSE))
 
-# Vamos a categorizar por el tiempo de demora de la solicitudes:
-# las finalizadas el tiempo de demora es la diferencia entre la fecha de inicio y la fecha del estado actual
-# si no estan finalizadas el tiempo se calcula con fecha de inicio y la fecha actual
+# Vamos a calcular el tiempo de demora de la solicitudes en días:
+# Para las finalizadas el tiempo de demora es la diferencia entre la fecha de inicio y la fecha del estado actual
+# Para las que no estan finalizadas el tiempo se calcula con fecha de inicio y la fecha actual
 
 datos_solicitudes$fechaInicio <- as.POSIXct(datos_solicitudes$fechaInicio, format = "%d-%m-%Y %H:%M")
 datos_solicitudes$fechaEstadoActual <- as.POSIXct(datos_solicitudes$fechaEstadoActual, format = "%d-%m-%Y %H:%M")
 
-datos_solicitudes <- mutate(datos_solicitudes, diasPasado1 = as.numeric(difftime(datos_solicitudes$fechaEstadoActual, datos_solicitudes$fechaInicio, units = "days")))
+datos_solicitudes <- mutate(datos_solicitudes, diasPasados = ifelse(datos_solicitudes$finalizada, 
+           round(as.numeric(
+               difftime(datos_solicitudes$fechaEstadoActual, datos_solicitudes$fechaInicio, units = "days"))), 
+           round(as.numeric(
+               difftime(Sys.time(), datos_solicitudes$fechaInicio, units = "days")))
+                                                       
+                                                      ))
+tail(datos_solicitudes, 60)
+#print(xtable(datos_solicitudes, caption = "DataSet de solicitudes"), type = "html")
+# Agrupaciones de datos 
 
-head(datos_solicitudes, 10)
+
 
 # que nos interesa visualizar en relación a los datos geoespaciales
 # Solicitudes realizadas por establecimiento y/o region y en relacion a la complejidad
 # Solicitudes recibidas por establemiento y/o region
 
+
+```
+ 
+Obtenemos un listado de cantidad de solicitudes que se envian en cada efector y cuál es su promedio en días de espera.
+
+```{r}
+
+solicitdesEstOrigen <- summarise(group_by(datos_solicitudes,EfectorOrigen, EfectorSISAOrigen), 
+                                 cantidad_solicitudes=n(),
+                                 promedio_espera = round(mean(diasPasados,na.rm = TRUE)))
+head(solicitdesEstOrigen, 20)
+
+
+```
+Obtenemos un listado de cantidad de solicitudes que se reciben en cada efector y cuál es su promedio en días de espera.
+
+```{r}
+solicitdesEstDestino <- summarise(group_by(datos_solicitudes,EfectorDestino,EfectorSISADestino), 
+                                 cantidad_solicitudes=n(),
+                                 promedio_espera = round(mean(diasPasados,na.rm = TRUE)))
+head(solicitdesEstDestino, 20)
+
+
+```
+Agrupamos solicitudes por tipo de prestacion solicitada.
+
+```{r}
+
+solicitdesTipoPrestacion <- summarise(group_by(datos_solicitudes,tipoPrestacion),
+                                 cantidad = n())
+head(solicitdesTipoPrestacion,20)
 
 ```
 
