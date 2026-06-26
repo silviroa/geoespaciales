@@ -17,6 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(sf)
 library(leaflet)
 library(readxl)
+library(readr)
 library(xtable)
 library(ggplot2)
 library(dplyr)
@@ -213,6 +214,33 @@ mapa_base_IGNG
 ## Analisando datos de referencia y contrareferencia
 
 ```{r}
+datos_solicitudes <- read_csv("files/listado-solicitudes_2026.csv")
+
+
+# Eliminamos datos sensibles
+datos_solicitudes <- select(datos_solicitudes,-idPrestacion,-idPaciente)
+
+# Agregamos una columna booleana que indique si la solicitud esta finalizada, según el estadoActual
+# Si el estadoActual es "validada", "rechazada", "vencida" se considera finalizada, en caso contrario estaría sin finalizar
+
+datos_solicitudes <- mutate(datos_solicitudes,
+                             finalizada=ifelse(estadoActual=="validada" | estadoActual=="rechazada" | estadoActual=="vencida" ,TRUE,FALSE))
+
+# Vamos a categorizar por el tiempo de demora de la solicitudes:
+# las finalizadas el tiempo de demora es la diferencia entre la fecha de inicio y la fecha del estado actual
+# si no estan finalizadas el tiempo se calcula con fecha de inicio y la fecha actual
+
+datos_solicitudes$fechaInicio <- as.POSIXct(datos_solicitudes$fechaInicio, format = "%d-%m-%Y %H:%M")
+datos_solicitudes$fechaEstadoActual <- as.POSIXct(datos_solicitudes$fechaEstadoActual, format = "%d-%m-%Y %H:%M")
+
+datos_solicitudes <- mutate(datos_solicitudes, diasPasado1 = as.numeric(difftime(datos_solicitudes$fechaEstadoActual, datos_solicitudes$fechaInicio, units = "days")))
+
+head(datos_solicitudes, 10)
+
+# que nos interesa visualizar en relación a los datos geoespaciales
+# Solicitudes realizadas por establecimiento y/o region y en relacion a la complejidad
+# Solicitudes recibidas por establemiento y/o region
+
 
 ```
 
