@@ -161,5 +161,32 @@ ggplot(establecimientos, aes(x = factor(complej))) +
   theme_minimal()
 ```
 
+## Mapa 
+
+
+```{r}
+
+mapa_base_IGNG <- leaflet()%>% 
+  addTiles('https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png') %>%
+  setView(lng =-68.140642,lat =-38.805236, zoom = 6.6) %>%  
+  addWMSTiles(
+    "https://wms.ign.gob.ar/geoserver/capabaseargenmap/gwc/service/wmts?request=GetCapabilities",
+    layers= "Capa base Argenmap",
+    options = WMSTileOptions(format = "image/png", transparent = TRUE),
+    tileOptions(tms = TRUE),
+    attribution = '<a href="http://www.ign.gob.ar/AreaServicios/Argenmap/IntroduccionV2" target="_blank">Instituto Geográfico Nacional</a> + <a href="http://www.osm.org/copyright" target="_blank">OpenStreetMap</a>') %>%  
+addPolygons(
+    data = regiones,
+    color = "blue",
+    weight = 2,
+    fillColor = "steelblue",
+    fillOpacity = 0.6
+  ) %>%
+ addMarkers(data=establecimientos, popup=~fna)
+mapa_base_IGNG
+
+```
+
+
 
 ## Referencias
