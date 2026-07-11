@@ -19,8 +19,12 @@ library(leaflet)
 library(readxl)
 library(readr)
 library(xtable)
+library(knitr)
+library(kableExtra)
 library(ggplot2)
 library(dplyr)
+library(DT)
+library(tidyverse)
 ```
 
 # El Sistema de Referencia/Contrarreferencia y la Regionalización Sanitaria
@@ -33,7 +37,7 @@ El **Sistema de Referencia y Contrarreferencia** es el mecanismo administrativo 
 
 Para que este flujo sea eficiente, el territorio se organiza en Regiones Sanitarias. En la Provincia de Neuquén, la regionalización sanitaria ha sido históricamente un pilar del renombrado Plan de Salud de Neuquén (iniciado formalmente en la década de 1970). Esta división territorial no es solo un límite administrativo; busca equidad, accesibilidad geográfica y optimización de recursos, distribuyendo hospitales de distinta complejidad (desde puestos sanitarios hasta el Hospital Provincial Neuquén Dr. Eduardo Castro Rendón) estratégicamente sobre la geografía neuquina.
 
-[@pelaez2021sistemas] [@cdi2026sre3] [@rovere1999redes] [@andesPlataforma] [@saludnqnRED] [@neuquen2024decreto1663] [@neuquenLey2977]
+[@pelaez2021sistemas] [@cdi2026sre3] [@rovere1999redes] [@saludnqnRED] [@neuquen2024decreto1663] [@neuquenLey2977]
 
 ## Importación de datos Geoespaciales
 
@@ -43,11 +47,11 @@ El territorio de la provincia se divide en regiones sanitarias. Es un modelo org
 
 **Alto Neuquén**: Chos Malal, Andacollo, Las Ovejas, Loncopué, El Cholar, El Huecú, Huinganco, Los Miches, Taquimilán, Tricao Malal, Caviahue, Copahue, Chorriaca, Coyuco Cochico, Los Guañacos, Manzano Amargo, Varvarco – Invernada Vieja, Villa del Nahueve, Villa del Curi Leuvú,
 
-**De la Comarca**: Cutral Co, Plaza Huincul, Sauzal Bonito. Confluencia: Neuquén capital, Plottier, Senillosa, Centenario, Villa El Chocón, Vista Alegre, Arroyito. 
+**De la Comarca**: Cutral Co, Plaza Huincul, Sauzal Bonito. Confluencia: Neuquén capital, Plottier, Senillosa, Centenario, Villa El Chocón, Vista Alegre, Arroyito.
 
-**Del Limay* **: Picún Leufú, Piedra del Águila, El Sauce, Paso aguerre, Santo Tomas. del Pehuén: Zapala, Aluminé, Las Lajas, Mariano Moreno, Villa Pehuenia, Moquehue, Bajada del Agrio, Las Coloradas, Covunco, Los Catutos, Quili Malal, Ramón Castro, Villa del Puente Picún Leufú. 
+**Del Limay\*** : Picún Leufú, Piedra del Águila, El Sauce, Paso aguerre, Santo Tomas. del Pehuén: Zapala, Aluminé, Las Lajas, Mariano Moreno, Villa Pehuenia, Moquehue, Bajada del Agrio, Las Coloradas, Covunco, Los Catutos, Quili Malal, Ramón Castro, Villa del Puente Picún Leufú.
 
-**De los Lagos del Sur**: Junín de los Andes, San Martín de los Andes, Villa la Angostura, Villa Lago Meliquina, Villa Traful, Pilo Lil. 
+**De los Lagos del Sur**: Junín de los Andes, San Martín de los Andes, Villa la Angostura, Villa Lago Meliquina, Villa Traful, Pilo Lil.
 
 **Vaca Muerta**: San Patricio del Chañar, Rincón de los Sauces, Buta Ranquil, Añelo, Barrancas, Octavio Pico, Aguada San Roque, Los Chihuidos.
 
@@ -65,18 +69,38 @@ leaflet(regiones) |>
   )
 
 ```
-### Campos incluidos en el dataset "Regiones"
 
+### Campos incluidos en el dataset "Regiones"
 
 ```{r echo = FALSE, warning=FALSE,  results = 'asis'}
 
 # Leemos el excel con la descripción de los campos
 campos_regiones <- read_excel("files/regiones.xlsx")
-print(xtable(campos_regiones, caption = "DataSet de regiones"), type = "html")
+kable(
+   campos_regiones,
+    align = "l"
+  ) %>%
+  kable_styling(
+    bootstrap_options = c(
+      "striped",
+      "hover",
+      "condensed"
+    ),
+    full_width = FALSE,
+    position = "left"
+  ) %>%
+  row_spec(
+    0,
+    bold = TRUE,
+    color = "white",
+    background = "#1F4E79"
+  ) %>%
+  footnote(
+    general = "Campos en dataSet de regiones",
+    general_title = ""
+  )
 
 ```
-
-
 
 ### Mapa de Establecimientos de Salud de la Provincia de Neuquén
 
@@ -99,22 +123,46 @@ leaflet(establecimientos) |>
 
 # Leemos el excel con la descripción de los campos
 campos_establecimientos <- read_excel("files/establecimientos.xlsx")
-print(xtable(campos_establecimientos, caption = "DataSet de establecimientos"), type = "html")
-
+kable(
+   campos_establecimientos,
+    align = "l"
+  ) %>%
+  kable_styling(
+    bootstrap_options = c(
+      "striped",
+      "hover",
+      "condensed"
+    ),
+    full_width = FALSE,
+    position = "left"
+  ) %>%
+  row_spec(
+    0,
+    bold = TRUE,
+    color = "white",
+    background = "#1F4E79"
+  ) %>%
+  footnote(
+    general = "Campos en dataSet de establecimiento",
+    general_title = ""
+  )
 ```
 
 ## Análisis exploratorio de los dataset
 
 ### Análisis de dataSet de regiones
 
-Resumen de variables del dataset
+Resumen de variables del dataset de regiones sanitarias
 
 ```{r}
 summary(regiones)
 
 ```
 
-Gráfico de barras para comparar regiones
+Mostramos un gráfico de barras para comparar el area en kilómetros de cada región.
+
+En Neuquén pasa algo muy particular: tienes regiones extremadamente densas y pequeñas (como la Región del Alto Neuquén) y regiones gigantescas con poca densidad, como la Región de los Lagos. En salud pública, contrastar el área de las regiones es fundamental para justificar el problema de la accesibilidad geográfica, cuando un paciente sea referido desde un puesto sanitario rural hacia el hospital cabecera de la región, tendrá que recorrer distancias críticas.
+
 ```{r}
 
 # Gráfico de barras para comparar regiones
@@ -123,31 +171,36 @@ ggplot(regiones, aes(x = reorder(region, area_km2), y = area_km2)) +
   coord_flip() + # Da vuelta el gráfico para leer bien los nombres de las regiones
   labs(
     title = "Comparación de Superficie por Región Sanitaria",
-    subtitle = "Análisis territorial del sistema de salud",
     x = "Región Sanitaria",
     y = "Superficie (en km²)"
   ) +
   theme_minimal()
 ```
+
 ### Análisis de dataSet de establecimientos
 
-Resumen de variables del dataset
+Resumen de variables del dataset de establecimientos.
 
 ```{r}
 summary(establecimientos)
 
 ```
 
+Mostramos gráficos de barras para comparar la cantidad de establecimientos por tipo y por complejidad.
+
+El primer gráfico muestra que la gran mayoría de los puntos son Centros de Salud o Puestos Sanitarios. Esto fundamenta la necesidad del sistema: la gente ingresa por estos efectores periféricos (Atención Primaria).
+
+El segundo gráfico muestra que hay muy pocos efectores con las complejidades más altas (como el Hospital Castro Rendón). Esto justifica por qué es vital tener un protocolo de Referencia aceitado: si todos los pacientes acudieran directamente a los nodos de alta complejidad sin pasar por los niveles inferiores, el sistema colapsaría inmediatamente.
 
 ```{r}
 
 # Gráfico de barras para la variable tipo de establecimiento
 ggplot(establecimientos, aes(x = factor(gna))) +
-  geom_bar(fill = "green", color = "white", width = 0.6) +
+  geom_bar(fill = "#1F4E79", color = "white", width = 0.6) +
   labs(
-    title = "Distribución de los Efectores según tipo de establecimiento",
+    title = "Distribución de establecimiento por tipo",
     x = "Tipo de establecimiento",
-    y = "Frecuencia Absoluta"
+    y = "Frecuencia"
   ) +
   theme_minimal()
 
@@ -155,16 +208,16 @@ ggplot(establecimientos, aes(x = factor(gna))) +
 ggplot(establecimientos, aes(x = factor(complej))) +
   geom_bar(fill = "coral", color = "white", width = 0.6) +
   labs(
-    title = "Distribución de los Efectores según su Nivel de Complejidad",
-    subtitle = "Evidencia de la jerarquía del sistema de salud",
+    title = "Distribución de los Efectores por nivel de complejidad",
     x = "Nivel de Complejidad",
-    y = "Frecuencia Absoluta"
+    y = "Frecuencia"
   ) +
   theme_minimal()
 ```
 
 ## Mapa Sanitario de Neuquén
 
+El mapa presentado a continuación constituye el núcleo metodológico de este análisis espacial. Al superponer los establecimientos asistenciales (puntos) sobre las jurisdicciones regionales (polígonos) , se transforma la información plana proveniente de los registros oficiales en evidencia territorial explícita.
 
 ```{r}
 
@@ -178,9 +231,25 @@ regiones <- mutate(regiones,colorfondo=case_when(
   region=="Región del Pehuén"~"violet"
 ))
 
+# Creamos un ícono personalizado más chico (ej: 15x25 píxeles)
+icono_chico <- makeIcon(
+  iconUrl = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  iconWidth = 15,   # Ancho del marcador en píxeles
+  iconHeight = 25,  # Alto del marcador en píxeles
+  iconAnchorX = 7,  # Punto de anclaje horizontal (mitad del ancho)
+  iconAnchorY = 25  # Punto de anclaje vertical (base del pin)
+)
+
+establecimientos <- establecimientos %>%
+  mutate(popup = paste0(
+    "<h4>", fna, "</h4>",
+    "Tipo de establecimiento: ", gna, "<br>",
+    "Complejidad: ", complej, "<br>"
+  ))
+
 mapa_base_IGNG <- leaflet()%>% 
   addTiles('https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png') %>%
-  setView(lng =-68.140642,lat =-38.805236, zoom = 6.6) %>%  
+  setView(lng =-68.140642,lat =-38.805236, zoom = 6) %>%  
   addWMSTiles(
     "https://wms.ign.gob.ar/geoserver/capabaseargenmap/gwc/service/wmts?request=GetCapabilities",
     layers= "Capa base Argenmap",
@@ -195,7 +264,10 @@ addPolygons(
     fillOpacity = 0.3,
     group="Regiones Sanitarias"
   ) %>%
- addMarkers(data=establecimientos, popup=~fna, group="Establecimientos")%>% 
+ addMarkers(data=establecimientos,
+            icon = icono_chico, 
+            popup=~popup,
+            group="Establecimientos")%>% 
  addLayersControl(overlayGroups = c("Regiones Sanitarias","Establecimientos"))%>%
  addLegend(
     position = "bottomright",
@@ -209,9 +281,13 @@ mapa_base_IGNG
 
 ```
 
-
-
 ## Analisando datos de referencia y contrareferencia
+
+Tras haber determinado la distribución geoespacial de la infraestructura y los límites político-administrativos de las Regiones Sanitarias de la Provincia del Neuquén, resulta indispensable analizar la dimensión dinámica del Sistema de Referencia y Contrarreferencia (SRC). Mientras que la cartografía expone la capacidad instalada teórica, el estudio de los flujos de derivación permite evaluar la eficiencia real, la velocidad de respuesta y los cuellos de botella del modelo prestacional adaptado bajo el Plan Provincial de Regionalización (Decreto Nº 1663/2024).
+
+Para este propósito, se incorpora un conjunto de datos que registra de forma diacrónica la trazabilidad de las solicitudes de derivación emitidas entre un establecimiento de origen y uno de destino durante el período comprendido entre enero y junio del año 2026. Este dataset, cuyo origen técnico subyace en los registros informáticos provistos por la Plataforma ANDES , contempla variables clave como el tipo de prestación de origen, el tipo de prestación solicitada, el estado actual de la solicitud.
+
+Vamos a agregar una columna booleana que indique si la solicitud esta finalizada, según el estadoActual: Si el estadoActual es "validada", "rechazada", "vencida" se considera finalizada, en caso contrario estaría sin finalizar. Tener este dato nos permitira realizar un mejor análisis de los dias de demora en resolver la derivación. [@andesPlataforma]
 
 ```{r}
 datos_solicitudes <- read_csv("files/listado-solicitudes_2026.csv")
@@ -239,50 +315,224 @@ datos_solicitudes <- mutate(datos_solicitudes, diasPasados = ifelse(datos_solici
            round(as.numeric(
                difftime(datos_solicitudes$fechaEstadoActual, datos_solicitudes$fechaInicio, units = "days"))), 
            round(as.numeric(
-               difftime(Sys.time(), datos_solicitudes$fechaInicio, units = "days")))
-                                                       
-                                                      ))
-tail(datos_solicitudes, 60)
-#print(xtable(datos_solicitudes, caption = "DataSet de solicitudes"), type = "html")
-# Agrupaciones de datos 
+               difftime(Sys.time(), datos_solicitudes$fechaInicio, units = "days")))))
 
-
-
-# que nos interesa visualizar en relación a los datos geoespaciales
-# Solicitudes realizadas por establecimiento y/o region y en relacion a la complejidad
-# Solicitudes recibidas por establemiento y/o region
-
+summary(datos_solicitudes)
 
 ```
- 
-Obtenemos un listado de cantidad de solicitudes que se envian en cada efector y cuál es su promedio en días de espera.
+
+Obtenemos un listado de cantidad de solicitudes que se **envian** en cada establecimiento y cuál es su promedio en días de espera. 
 
 ```{r}
 
 solicitdesEstOrigen <- summarise(group_by(datos_solicitudes,EfectorOrigen, EfectorSISAOrigen), 
                                  cantidad_solicitudes=n(),
                                  promedio_espera = round(mean(diasPasados,na.rm = TRUE)))
-head(solicitdesEstOrigen, 20)
 
+datatable(
+  solicitdesEstOrigen,
+  colnames = c("Establecimiento Origen", "Código SISA (REFES)", "Cantidad de Solicitudes", "Promedio de Espera (Días)"),
+  options = list(
+    pageLength = 10,       # Cantidad de filas a mostrar por página
+    autoWidth = TRUE,      # Ajuste automático del ancho de columnas
+    order = list(list(2, 'desc')), # Ordenar por defecto por 'cantidad_solicitudes' (columna 2, índice base 0)
+    dom = 'Bfrtip'        # Configura la posición de los elementos (Botones, Filtro, Tabla, Paginación)
+  ),
+  rownames = FALSE,         # Quita la columna de índices numéricos de R
+  elementId = "tabla-efectores-origen" 
+) %>% 
+  formatStyle(columns = 1:4, fontSize = '85%')
 
 ```
-Obtenemos un listado de cantidad de solicitudes que se reciben en cada efector y cuál es su promedio en días de espera.
+
+Obtenemos un listado de cantidad de solicitudes que se **reciben** en cada efector y cuál es su promedio en días de espera.
 
 ```{r}
 solicitdesEstDestino <- summarise(group_by(datos_solicitudes,EfectorDestino,EfectorSISADestino), 
                                  cantidad_solicitudes=n(),
                                  promedio_espera = round(mean(diasPasados,na.rm = TRUE)))
-head(solicitdesEstDestino, 20)
-
-
+datatable(
+  solicitdesEstDestino,
+  colnames = c("Establecimiento Destino", "Código SISA (REFES)", "Cantidad de Solicitudes", "Promedio de Espera (Días)"),
+  options = list(
+    pageLength = 10,       # Cantidad de filas a mostrar por página
+    autoWidth = TRUE,      # Ajuste automático del ancho de columnas
+    order = list(list(2, 'desc')), # Ordenar por defecto por 'cantidad_solicitudes' (columna 2, índice base 0)
+    dom = 'Bfrtip'        # Configura la posición de los elementos (Botones, Filtro, Tabla, Paginación)
+  ),
+  rownames = FALSE,         # Quita la columna de índices numéricos de R
+  elementId = "tabla-efectores-destino" 
+) %>% 
+  formatStyle(columns = 1:4, fontSize = '85%')
 ```
-Agrupamos solicitudes por tipo de prestacion solicitada.
+
+
+Ahora agrupamos derivaciones por tipo de prestación solicitada.
 
 ```{r}
 
 solicitdesTipoPrestacion <- summarise(group_by(datos_solicitudes,tipoPrestacion),
                                  cantidad = n())
-head(solicitdesTipoPrestacion,20)
+
+datatable(
+  solicitdesTipoPrestacion,
+  colnames = c("Tipo de prestación", "cantidad"),
+  options = list(
+    pageLength = 10,       # Cantidad de filas a mostrar por página
+    autoWidth = TRUE,      # Ajuste automático del ancho de columnas
+    order = list(list(1, 'desc')), # Ordenar por defecto por 'cantidad_solicitudes' (columna 2, índice base 0)
+    dom = 'Bfrtip'        # Configura la posición de los elementos (Botones, Filtro, Tabla, Paginación)
+  ),
+  rownames = FALSE,         # Quita la columna de índices numéricos de R
+  elementId = "tabla-tipo-prestacion" 
+) %>% 
+  formatStyle(columns = 1:4, fontSize = '85%')
+
+```
+
+
+## Mapa con operaciones geométricas
+
+En el mapa se visualizarán los flujos de derivación de pacientes dentro de la región sanitaria "Alto Neuquén", así como aquellos traslados que exceden sus límites hacia otras regiones de la provincia. A través de líneas de conexión cuyo grosor es directamente proporcional al volumen de derivaciones realizadas, la visualización ofrece un diagnóstico de la red asistencial. Este análisis permite identificar de forma inmediata los nodos de mayor demanda, las rutas de derivación más frecuentes y el grado de resolución interna de la región, convirtiéndose en una herramienta clave para la evaluación y optimización de la red de complejidad integrada.
+
+
+```{r}
+
+# Unir establecimientos con regiones: Le pega a cada punto el nombre de la región sanitaria a la que pertenece
+establecimientos_con_region <- st_join(establecimientos, regiones, join = st_intersects)
+
+
+#Elegimos la region que se mostrará en el mapa
+nombre_region_elegida <- "Región Alto Neuquén"
+
+#filtramos el poligono de la región seleccionada
+region_poligono <- regiones %>% 
+  filter(region == nombre_region_elegida)
+
+#Y ahora los establecimientos de esa región
+establecimientos_region <- establecimientos_con_region %>% 
+  filter(region == nombre_region_elegida)
+
+
+# Extraemos las coordenadas X e Y de todos los establecimientos para poder cruzarlas
+coords_establecimientos <- establecimientos %>%
+  mutate(
+    X = st_coordinates(.)[,1],
+    Y = st_coordinates(.)[,2]
+  ) %>%
+  st_drop_geometry() %>%
+  select(cod_sisa, X, Y)
+
+# Cruzamos los datos de derivaciones con los datos geograficos
+# Cruzamos por el Origen
+deriv_con_coords <- datos_solicitudes %>%
+  left_join(coords_establecimientos, by = c("EfectorSISAOrigen" = "cod_sisa")) %>%
+  rename(X_orig = X, Y_orig = Y) %>%
+  
+  left_join(coords_establecimientos, by = c("EfectorSISADestino" = "cod_sisa")) %>%
+  rename(X_dest = X, Y_dest = Y) %>%
+  
+  #Limpiamos registros sin coordenadas válidas
+  filter(!is.na(X_orig) & !is.na(X_dest)) %>%
+  
+  # Contamos cuántas derivaciones existen por par Origen-Destino
+  # Incluimos las coordenadas y variables categóricas que queramos conservar para el mapa
+  group_by(EfectorOrigen, EfectorSISAOrigen,EfectorDestino,EfectorSISADestino, X_orig, Y_orig, X_dest, Y_dest) %>%
+  summarise(
+    cantidad_solicitudes = n(),
+    .groups = "drop"
+  )
+
+# FILTRAR DERIVACIONES QUE SE ORIGINAN EN LA REGIÓN SELECCIONADA
+# Filtramos para que el origen de la derivación esté en la lista de establecimientos de la región
+deriv_filtradas <- deriv_con_coords %>%
+  filter(EfectorSISAOrigen %in% establecimientos_region$cod_sisa)
+
+
+# OPERACIÓN GEOESPACIAL: CONSTRUIR LAS LÍNEAS DE DESEO (ST_LINESTRING)
+# Generamos una matriz de puntos (Origen -> Destino) para cada fila y la transformamos en geometría de línea
+lineas_deseo_list <- lapply(1:nrow(deriv_filtradas), function(i) {
+  st_linestring(matrix(c(deriv_filtradas$X_orig[i], deriv_filtradas$X_dest[i],
+                         deriv_filtradas$Y_orig[i], deriv_filtradas$Y_dest[i]), 
+                       ncol = 2))
+})
+
+# Convertimos la lista en un objeto espacial sf definitivo
+deriv_lineas_sf <- st_sf(
+  deriv_filtradas,
+  geometry = st_sfc(lineas_deseo_list, crs = st_crs(establecimientos))
+)
+
+# Cartelito interactivo para las líneas de derivación
+deriv_lineas_geo <- deriv_lineas_sf %>%
+  mutate(popup_texto = paste0(
+    "<strong>Flujo de Derivación</strong><br/>",
+    "<strong>Origen SISA:</strong> ", EfectorOrigen, "<br/>",
+    "<strong>Destino SISA:</strong> ", EfectorDestino, "<br/>",
+    "<strong>Total Solicitudes:</strong> <span style='color:red;'>", cantidad_solicitudes, "</span>"
+  ))
+
+# Cartelito interactivo para cada punto (establecimiento)
+establecimientos_region_geo <- establecimientos_region %>%
+  mutate(popup_texto = paste0(
+    "<strong>Establecimiento:</strong> ", fna, "<br/>",
+    "<strong>Tipo:</strong> ", gna, "<br/>",
+    "<strong>Código SISA:</strong> ", cod_sisa
+  ))
+
+mapa_interactivo <- leaflet() %>%
+  # Añadir un mapa base (Fondo gris claro ideal para resaltar datos temáticos)
+ addTiles('https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png') %>%
+  setView(lng =-70.273561,lat =-37.381230, zoom = 8) %>%  
+  addWMSTiles(
+    "https://wms.ign.gob.ar/geoserver/capabaseargenmap/gwc/service/wmts?request=GetCapabilities",
+    layers= "Capa base Argenmap",
+    options = WMSTileOptions(format = "image/png", transparent = TRUE),
+    tileOptions(tms = TRUE),
+    attribution = '<a href="http://www.ign.gob.ar/AreaServicios/Argenmap/IntroduccionV2" target="_blank">Instituto Geográfico Nacional</a> + <a href="http://www.osm.org/copyright" target="_blank">OpenStreetMap</a>') %>%
+  
+  # Capa 1: Dibujar el polígono de la región sanitaria seleccionada
+  addPolygons(
+    data = region_poligono,
+    fillColor = "orange",
+    fillOpacity = 0.3,
+    color = "#666666",
+    weight = 1.5,
+    group = "region"
+  ) %>%
+  
+  # Capa 2: Dibujar las Líneas de Deseo (Flujos)
+  addPolylines(
+    data = deriv_lineas_geo,
+    # El grosor físico en la pantalla depende de la cantidad de solicitudes
+    weight = ~sqrt(cantidad_solicitudes) * 1.5, 
+    color = "#1f78b4",
+    opacity = 0.7,
+   # highlightOptions = highlightOptions(weight = 5, color = "#ff7f00", bringToFront = TRUE),
+    popup = ~popup_texto,
+    group = "Líneas de Derivación"
+  ) %>%
+  
+  # Capa 3: Dibujar los Establecimientos (Puntos)
+  addCircleMarkers(
+    data = establecimientos_region_geo,
+    radius = 6,
+    fillColor = "#e31a1c",
+    fillOpacity = 0.9,
+    color = "#ffffff",
+    weight = 1,
+    popup = ~popup_texto,
+    group = "Establecimientos"
+  ) %>%
+  
+  # Añadir un control para prender y apagar capas en el mapa
+  addLayersControl(
+    overlayGroups = c("Región Sanitaria", "Líneas de Derivación", "Establecimientos"),
+    options = layersControlOptions(collapsed = FALSE)
+  )
+
+# 4. VISUALIZAR EL MAPA EN RSTUDIO
+mapa_interactivo
 
 ```
 
