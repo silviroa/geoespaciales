@@ -1,0 +1,419 @@
+---
+title: "Sistema de Referencia y contrareferencia"
+output: 
+  flexdashboard::flex_dashboard:
+    theme:
+      bg: "#F0FDFA"
+      fg: "#1E2939" 
+      primary: "#93E5D5"
+      base_font:
+        google: Prompt
+      code_font:
+        google: JetBrains Mono
+    orientation: columns
+    vertical_layout: fill
+    
+    navbar:
+      - title: "Reporte"
+        href: "reportes/PracticoN1_Ramos_Roa.html"
+        
+    social: ["menu"]
+    source_code: embed
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(flexdashboard)
+library(sf)
+library(leaflet)
+library(readxl)
+library(readr)
+library(xtable)
+library(knitr)
+library(kableExtra)
+library(ggplot2)
+library(dplyr)
+library(DT)
+library(tidyverse)
+library(shiny)
+# Install thematic and un-comment for themed static plots (i.e., ggplot2)
+# thematic::thematic_rmd()
+```
+
+```{r, echo = FALSE, include = FALSE}
+regiones <- st_read("files/regiones/regiones.shp")
+establecimientos <- st_read("files/establecimientos/establecimientos.shp")
+regiones <- mutate(regiones,colorfondo=case_when(
+  region=="Región de la Comarca"~"red",
+  region=="Región Confluencia"~"blue",
+  region=="Región del Limay"~"yellow",
+  region=="Región Alto Neuquén"~"orange",
+  region=="Región de los Lagos del Sur"~"green",
+  region=="Región Vaca Muerta"~"purple",
+  region=="Región del Pehuén"~"violet"
+))
+
+# Creamos un ícono personalizado más chico (ej: 15x25 píxeles)
+icono_chico <- makeIcon(
+  iconUrl = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  iconWidth = 15,   # Ancho del marcador en píxeles
+  iconHeight = 25,  # Alto del marcador en píxeles
+  iconAnchorX = 7,  # Punto de anclaje horizontal (mitad del ancho)
+  iconAnchorY = 25  # Punto de anclaje vertical (base del pin)
+)
+
+establecimientos <- establecimientos %>%
+  mutate(popup = paste0(
+    "<h4>", fna, "</h4>",
+    "Tipo de establecimiento: ", gna, "<br>",
+    "Complejidad: ", complej, "<br>"
+  ))
+
+mapa_base_IGNG <- leaflet()%>% 
+  addTiles('https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png') %>%
+  setView(lng =-68.140642,lat =-38.805236, zoom = 6) %>%  
+  addWMSTiles(
+    "https://wms.ign.gob.ar/geoserver/capabaseargenmap/gwc/service/wmts?request=GetCapabilities",
+    layers= "Capa base Argenmap",
+    options = WMSTileOptions(format = "image/png", transparent = TRUE),
+    tileOptions(tms = TRUE),
+    attribution = '<a href="http://www.ign.gob.ar/AreaServicios/Argenmap/IntroduccionV2" target="_blank">Instituto Geográfico Nacional</a> + <a href="http://www.osm.org/copyright" target="_blank">OpenStreetMap</a>') %>%  
+addPolygons(
+    data = regiones,
+    color = "blue",
+    weight = 2,
+    fillColor = ~colorfondo,
+    fillOpacity = 0.3,
+    group="Regiones Sanitarias"
+  ) %>%
+ addMarkers(data=establecimientos,
+            icon = icono_chico, 
+            popup=~popup,
+            group="Establecimientos")%>% 
+ addLayersControl(overlayGroups = c("Regiones Sanitarias","Establecimientos"))%>%
+ addLegend(
+    position = "bottomright",
+    colors = regiones$colorfondo,
+    labels = regiones$region,
+    title = "Regiones Sanitarias"
+  )
+
+
+```
+
+Regionalización
+============================================
+
+Column {data-width=650 .tabset}
+-----------------------------------------------------------------------
+
+### Mapa Regionalización
+
+```{r, echo = FALSE}
+    
+mapa_base_IGNG
+
+```
+
+### Establecimientos
+
+```{r,echo=FALSE}
+ggplot(establecimientos, aes(x = factor(gna))) +
+  geom_bar(fill = "#1F4E79", color = "white", width = 0.6) +
+  labs(
+    title = "Distribución de establecimiento por tipo",
+    x = "Tipo de establecimiento",
+    y = NULL
+  ) +
+  theme_minimal()+
+theme(
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1,
+      vjust = 1
+    )
+  
+)
+
+ggplot(establecimientos, aes(x = factor(complej))) +
+  geom_bar(fill = "coral", color = "white", width = 0.6) +
+  labs(
+    title = "Distribución de los Efectores por nivel de complejidad",
+    x = "Nivel de Complejidad",
+    y = "Frecuencia"
+  ) +
+  theme_minimal()
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Cantidad de establecimientos
+
+```{r,echo=FALSE}
+cantEstablecimiento <- nrow(establecimientos)
+valueBox(cantEstablecimiento, icon="fa-hospital", color="info")
+``` 
+
+### Cantidad de Regiones
+
+```{r,echo=FALSE}
+cantRegiones <- nrow(regiones)
+valueBox(cantRegiones, icon="fa-map", color="warning")
+```
+
+
+### Distribucion por Regiones
+
+```{r, echo = FALSE}
+establecimientosRegion <- st_join(establecimientos, regiones, join = st_intersects)
+
+  
+Datos_agrupados<-establecimientosRegion%>%
+    group_by(region)%>%
+    summarise(cantidad = n())
+
+
+ggplot(Datos_agrupados,
+       aes(x = reorder(region, cantidad), y = cantidad)) +
+  geom_col(fill = "#FFDA8A", width = 0.7,) +
+  geom_text(
+    aes(label = cantidad),
+    hjust = 1.2,
+    color = "black",
+    size = 3.5,
+    fontface = "bold"
+  ) +
+  coord_flip() +
+  theme_minimal(paper="#F0FDFA")+
+  labs(x = NULL, y = NULL) +
+  theme(
+    axis.text = element_text(size = 10)
+  ) +
+  expand_limits(y = max(Datos_agrupados$cantidad) * 1.1)
+
+```
+
+
+
+
+Secundaria
+============================================
+
+### Mapa interactivo
+
+```{r, echo=FALSE}
+
+datos_solicitudes <- read_csv("files/listado-solicitudes_2026.csv")
+
+datos_solicitudes <- select(datos_solicitudes,-idPrestacion,-idPaciente)
+datos_solicitudes$EfectorSISAOrigen <- as.character(datos_solicitudes$EfectorSISAOrigen)
+datos_solicitudes$EfectorSISADestino <- as.character(datos_solicitudes$EfectorSISADestino)
+
+
+```
+
+
+
+
+
+
+```{r, echo=FALSE}
+# Unir establecimientos con regiones: Le pega a cada punto el nombre de la región sanitaria a la que pertenece
+
+establecimientos_con_region <- st_join(establecimientos, regiones, join = st_intersects)
+
+coords <- st_coordinates(establecimientos)
+
+# Extraemos las coordenadas X e Y de todos los establecimientos para poder cruzarlas
+
+coords_establecimientos <- establecimientos %>%
+  mutate(
+    X = coords[,1],
+    Y = coords[,2]
+  ) %>%
+  st_drop_geometry() %>%
+  select(cod_sisa, X, Y)
+```
+
+
+
+```{r,echo=FALSE}
+# Cruzamos los datos de derivaciones con los datos geograficos
+# Cruzamos por el Origen
+deriv_con_coords <- datos_solicitudes %>%
+  left_join(coords_establecimientos, by = c("EfectorSISAOrigen" = "cod_sisa")) %>%
+  rename(X_orig = X, Y_orig = Y) %>%
+  
+  left_join(coords_establecimientos, by = c("EfectorSISADestino" = "cod_sisa")) %>%
+  rename(X_dest = X, Y_dest = Y) %>%
+  
+  #Limpiamos registros sin coordenadas válidas
+  filter(!is.na(X_orig) & !is.na(X_dest)) %>%
+  
+  # Contamos cuántas derivaciones existen por par Origen-Destino
+  # Incluimos las coordenadas y variables categóricas que queramos conservar para el mapa
+  group_by(EfectorOrigen, EfectorSISAOrigen,EfectorDestino,EfectorSISADestino, X_orig, Y_orig, X_dest, Y_dest) %>%
+  summarise(
+    cantidad_solicitudes = n(),
+    .groups = "drop"
+  )
+
+
+```
+   
+----------------------------------------------------   
+
+
+```{r,echo=FALSE}
+#Elegimos la region que se mostrará en el mapa
+selectInput(
+  "region",
+  "Región sanitaria",
+  choices = sort(unique(regiones$region)),
+  selected = ""
+)
+
+```
+
+row            
+----------------------------------------------------
+
+```{r, echo=FALSE}
+
+#filtramos el poligono de la región seleccionada
+region_poligono <- reactive({
+  regiones %>%
+    filter(region == input$region)
+})
+
+#filtra las los establecimientos de la region seleccionada
+establecimientos_region <- reactive({
+  establecimientos_con_region %>%
+    filter(region == input$region)
+})
+
+#filtra las derivaciones cuyo origen sean establecimientos de la región seleccionada
+deriv_filtradas <- reactive({
+  deriv_con_coords %>%
+    filter(EfectorSISAOrigen %in%
+             establecimientos_region()$cod_sisa)
+
+})
+
+
+# FILTRAR DERIVACIONES QUE SE ORIGINAN EN LA REGIÓN SELECCIONADA
+# Filtramos para que el origen de la derivación esté en la lista de establecimientos de la región
+deriv_lineas_sf <- reactive({
+  lineas_deseo_list <- lapply(
+    1:nrow(deriv_filtradas()),
+    function(i){
+      st_linestring(
+        matrix(
+          c(
+            deriv_filtradas()$X_orig[i],
+            deriv_filtradas()$X_dest[i],
+            deriv_filtradas()$Y_orig[i],
+            deriv_filtradas()$Y_dest[i]
+          ),
+          ncol = 2
+        )
+      )
+    })
+  st_sf(
+    deriv_filtradas(),
+    geometry = st_sfc(
+      lineas_deseo_list,
+      crs = st_crs(establecimientos)
+    )
+  )
+})
+
+
+# Cartelito interactivo para las líneas de derivación
+deriv_lineas_geo <- reactive({ deriv_lineas_sf() %>%
+  mutate(popup_texto = paste0(
+    "<strong>Flujo de Derivación</strong><br/>",
+    "<strong>Origen SISA:</strong> ", EfectorOrigen, "<br/>",
+    "<strong>Destino SISA:</strong> ", EfectorDestino, "<br/>",
+    "<strong>Total Solicitudes:</strong> <span style='color:red;'>", cantidad_solicitudes, "</span>"
+  ))
+})
+
+# Cartelito interactivo para cada punto (establecimiento)
+establecimientos_region_geo <- reactive({ establecimientos_region() %>%
+  mutate(popup_texto = paste0(
+    "<strong>Establecimiento:</strong> ", fna, "<br/>",
+    "<strong>Tipo:</strong> ", gna, "<br/>",
+    "<strong>Código SISA:</strong> ", cod_sisa
+  ))
+})
+
+output$mapa <- renderLeaflet({
+
+  leaflet() %>%
+     addTiles('https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png') %>%
+    setView(lng =-70.273561,lat =-37.381230, zoom = 8) %>%  
+    addWMSTiles(
+    "https://wms.ign.gob.ar/geoserver/capabaseargenmap/gwc/service/wmts?request=GetCapabilities",
+    layers= "Capa base Argenmap",
+    options = WMSTileOptions(format = "image/png", transparent = TRUE),
+    tileOptions(tms = TRUE),
+    attribution = '<a href="http://www.ign.gob.ar/AreaServicios/Argenmap/IntroduccionV2" target="_blank">Instituto Geográfico Nacional</a> + <a href="http://www.osm.org/copyright" target="_blank">OpenStreetMap</a>') %>%
+  
+    addPolygons(
+      data = region_poligono(),
+      fillColor = "orange",
+      fillOpacity = 0.3,
+      color = "#666666",
+       weight = 1.5,
+      group = "region"
+    ) %>%
+
+    addPolylines(
+      data = deriv_lineas_geo(),
+         # El grosor físico en la pantalla depende de la cantidad de solicitudes
+      weight = ~sqrt(cantidad_solicitudes) * 1.5, 
+      color = "#1f78b4",
+      opacity = 0.7,
+   # highlightOptions = highlightOptions(weight = 5, color = "#ff7f00", bringToFront = TRUE),
+      popup = ~popup_texto,
+      group = "Líneas de Derivación"
+    ) %>%
+
+    addCircleMarkers(
+      data = establecimientos_region_geo(),
+      radius = 6,
+      fillColor = "#e31a1c",
+      fillOpacity = 0.9,
+      color = "#ffffff",
+      weight = 1,
+      popup = ~popup_texto,
+      group = "Establecimientos"
+    )
+
+})
+
+
+# 4. VISUALIZAR EL MAPA EN RSTUDIO
+leafletOutput("mapa", height =  700)
+
+```
+
+
+
+```{r}
+#mejoras
+# revisar input debajo agregar box reactivos por la región elegida
+# lineas: cambios para poder diferencialas mejor
+# # clouster para los puntos (o lineas)
+# mejorar gráficos
+# agregar listados
+```
+```{r}
+# el mapa interactivo responde a "cómo es el transito de pacientes dentro del sistema público de salud dentro de una región y hacia afuera de la misma"
+
+```
+
+

@@ -2,7 +2,7 @@
 title: "Práctica: Aplicaciones de Minería con Datos Geográficos"
 date: "18-06-2026"
 author: "Ramos Celeste - Roa Silvina"
-bibliography: references.bib
+bibliography: "../references.bib"
 biblio-style: apalike
 output: 
   html_document:
@@ -10,6 +10,8 @@ output:
     toc_float: true
     toc_depth: 3
     number_sections: true
+    code_folding: hide
+
 ---
 
 ```{r setup, include=FALSE}
@@ -58,7 +60,7 @@ El territorio de la provincia se divide en regiones sanitarias. Es un modelo org
 Cada región sanitaria brinda el servicio de salud a través de un Hospital de Referencia Provincial de máxima complejidad, que es de referencia interregional y regional, teniendo cada uno de ellos una delimitación geográfica de población a cargo abordando del primer al tercer nivel de atención. [@minsaludnqn2024zonas]
 
 ```{r}
-regiones <- st_read("files/regiones/regiones.shp")
+regiones <- st_read("../files/regiones/regiones.shp")
 leaflet(regiones) |>
   addTiles() |>
   addPolygons(
@@ -75,7 +77,7 @@ leaflet(regiones) |>
 ```{r echo = FALSE, warning=FALSE,  results = 'asis'}
 
 # Leemos el excel con la descripción de los campos
-campos_regiones <- read_excel("files/regiones.xlsx")
+campos_regiones <- read_excel("../files/regiones.xlsx")
 kable(
    campos_regiones,
     align = "l"
@@ -107,7 +109,7 @@ kable(
 [@sisa2026refes]
 
 ```{r}
-establecimientos <- st_read("files/establecimientos/establecimientos.shp")
+establecimientos <- st_read("../files/establecimientos/establecimientos.shp")
 
 leaflet(establecimientos) |>
   addProviderTiles("CartoDB.Positron") |>
@@ -122,7 +124,7 @@ leaflet(establecimientos) |>
 ```{r echo = FALSE, warning=FALSE,  results = 'asis'}
 
 # Leemos el excel con la descripción de los campos
-campos_establecimientos <- read_excel("files/establecimientos.xlsx")
+campos_establecimientos <- read_excel("../files/establecimientos.xlsx")
 kable(
    campos_establecimientos,
     align = "l"
@@ -290,7 +292,7 @@ Para este propósito, se incorpora un conjunto de datos que registra de forma di
 Vamos a agregar una columna booleana que indique si la solicitud esta finalizada, según el estadoActual: Si el estadoActual es "validada", "rechazada", "vencida" se considera finalizada, en caso contrario estaría sin finalizar. Tener este dato nos permitira realizar un mejor análisis de los dias de demora en resolver la derivación. [@andesPlataforma]
 
 ```{r}
-datos_solicitudes <- read_csv("files/listado-solicitudes_2026.csv")
+datos_solicitudes <- read_csv("../files/listado-solicitudes_2026.csv")
 
 # Transformaciones de datos 
 # Eliminamos datos sensibles y convertimos tipos
