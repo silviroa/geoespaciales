@@ -45,7 +45,7 @@ Para que este flujo sea eficiente, el territorio se organiza en Regiones Sanitar
 
 ### Mapa de Regiones Sanitarias de la Provincia de Neuquén
 
-El territorio de la provincia se divide en regiones sanitarias. Es un modelo organizacional regionalizado e integrado, compuesto por una red de establecimientos escalonados es niveles de complejidad creciente agrupados en siete Regiones Sanitarias. A continuación, se listan cada una de las regiones con los Municipios y Comisiones de Fomento que nuclean.
+El territorio de la provincia se divide en regiones sanitarias. Es un modelo organizacional regionalizado e integrado, compuesto por una red de establecimientos escalonados en niveles de complejidad creciente agrupados en siete Regiones Sanitarias. A continuación, se listan cada una de las regiones con los Municipios y Comisiones de Fomento que nuclean:
 
 **Alto Neuquén**: Chos Malal, Andacollo, Las Ovejas, Loncopué, El Cholar, El Huecú, Huinganco, Los Miches, Taquimilán, Tricao Malal, Caviahue, Copahue, Chorriaca, Coyuco Cochico, Los Guañacos, Manzano Amargo, Varvarco – Invernada Vieja, Villa del Nahueve, Villa del Curi Leuvú,
 

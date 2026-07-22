@@ -15,7 +15,7 @@ output:
     
     navbar:
       - title: "Reporte"
-        href: "reportes/PracticoN1_Ramos_Roa.html"
+        href: "./reportes/PracticoN1_Ramos_Roa.html"
         
     social: ["menu"]
     source_code: embed
@@ -37,6 +37,8 @@ library(dplyr)
 library(DT)
 library(tidyverse)
 library(shiny)
+library(plotly)
+
 # Install thematic and un-comment for themed static plots (i.e., ggplot2)
 # thematic::thematic_rmd()
 ```
@@ -72,7 +74,7 @@ establecimientos <- establecimientos %>%
 
 mapa_base_IGNG <- leaflet()%>% 
   addTiles('https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png') %>%
-  setView(lng =-68.140642,lat =-38.805236, zoom = 6) %>%  
+  setView(lng =-68.140642,lat =-38.805236, zoom = 7) %>%  
   addWMSTiles(
     "https://wms.ign.gob.ar/geoserver/capabaseargenmap/gwc/service/wmts?request=GetCapabilities",
     layers= "Capa base Argenmap",
@@ -118,32 +120,56 @@ mapa_base_IGNG
 
 ### Establecimientos
 
+#### Distribución de establecimiento por tipo
 ```{r,echo=FALSE}
-ggplot(establecimientos, aes(x = factor(gna))) +
-  geom_bar(fill = "#1F4E79", color = "white", width = 0.6) +
+gTiposEstablecimientos <- ggplot(establecimientos, aes(x = factor(gna))) +
+  geom_bar(fill = "#548FC4", color = "white", width = 0.6) +
   labs(
-    title = "Distribución de establecimiento por tipo",
     x = "Tipo de establecimiento",
     y = NULL
   ) +
-  theme_minimal()+
+  theme_minimal(paper="#F0FDFA") +
 theme(
     axis.text.x = element_text(
-      angle = 45,
+      angle = 30,
       hjust = 1,
       vjust = 1
     )
   
 )
+ggplotly(gTiposEstablecimientos) %>%
+  layout(
+    paper_bgcolor = "#F0FDFA",
+    plot_bgcolor = "#F0FDFA",
+    xaxis = list(showgrid = FALSE),
+    yaxis = list(showgrid = TRUE)
+  )
 
-ggplot(establecimientos, aes(x = factor(complej))) +
-  geom_bar(fill = "coral", color = "white", width = 0.6) +
+
+```
+<br>
+<br>
+<br>
+
+#### Distribución de los Efectores por nivel de complejidad
+
+```{r,echo=FALSE}
+gComplejidad <- ggplot(establecimientos, aes(x = factor(complej))) +
+  geom_bar(fill = "#E28A78", color = "white", width = 0.6) +
   labs(
-    title = "Distribución de los Efectores por nivel de complejidad",
     x = "Nivel de Complejidad",
     y = "Frecuencia"
   ) +
-  theme_minimal()
+  theme_minimal(paper="#F0FDFA")
+
+ggplotly(gComplejidad) %>%
+  layout(
+    paper_bgcolor = "#F0FDFA",
+    plot_bgcolor = "#F0FDFA",
+    xaxis = list(showgrid = FALSE),
+    yaxis = list(showgrid = TRUE)
+  )
+
 ```
 
 Column {data-width=350}
@@ -160,11 +186,11 @@ valueBox(cantEstablecimiento, icon="fa-hospital", color="info")
 
 ```{r,echo=FALSE}
 cantRegiones <- nrow(regiones)
-valueBox(cantRegiones, icon="fa-map", color="warning")
+valueBox(cantRegiones, icon="fa-globe-americas", color="warning")
 ```
 
 
-### Distribucion por Regiones
+### Distribución de establecimientos por región
 
 ```{r, echo = FALSE}
 establecimientosRegion <- st_join(establecimientos, regiones, join = st_intersects)
@@ -198,10 +224,9 @@ ggplot(Datos_agrupados,
 
 
 
-Secundaria
+Derivaciones
 ============================================
 
-### Mapa interactivo
 
 ```{r, echo=FALSE}
 
@@ -212,10 +237,26 @@ datos_solicitudes$EfectorSISAOrigen <- as.character(datos_solicitudes$EfectorSIS
 datos_solicitudes$EfectorSISADestino <- as.character(datos_solicitudes$EfectorSISADestino)
 
 
+
+datos_solicitudes <- mutate(datos_solicitudes,
+                             finalizada=ifelse(estadoActual=="validada" | estadoActual=="rechazada" | estadoActual=="vencida" ,TRUE,FALSE))
+
+# Vamos a calcular el tiempo de demora de la solicitudes en días:
+# Para las finalizadas el tiempo de demora es la diferencia entre la fecha de inicio y la fecha del estado actual
+# Para las que no estan finalizadas el tiempo se calcula con fecha de inicio y la fecha actual
+
+datos_solicitudes$fechaInicio <- as.POSIXct(datos_solicitudes$fechaInicio, format = "%d-%m-%Y %H:%M")
+datos_solicitudes$fechaEstadoActual <- as.POSIXct(datos_solicitudes$fechaEstadoActual, format = "%d-%m-%Y %H:%M")
+
+datos_solicitudes <- mutate(datos_solicitudes, diasPasados = ifelse(datos_solicitudes$finalizada, 
+           round(as.numeric(
+               difftime(datos_solicitudes$fechaEstadoActual, datos_solicitudes$fechaInicio, units = "days"))), 
+           round(as.numeric(
+               difftime(Sys.time(), datos_solicitudes$fechaInicio, units = "days")))))
+
+
+
 ```
-
-
-
 
 
 
@@ -228,13 +269,13 @@ coords <- st_coordinates(establecimientos)
 
 # Extraemos las coordenadas X e Y de todos los establecimientos para poder cruzarlas
 
-coords_establecimientos <- establecimientos %>%
+coords_establecimientos <- establecimientos_con_region %>%
   mutate(
     X = coords[,1],
     Y = coords[,2]
   ) %>%
   st_drop_geometry() %>%
-  select(cod_sisa, X, Y)
+  select(cod_sisa, X, Y, region)
 ```
 
 
@@ -244,27 +285,29 @@ coords_establecimientos <- establecimientos %>%
 # Cruzamos por el Origen
 deriv_con_coords <- datos_solicitudes %>%
   left_join(coords_establecimientos, by = c("EfectorSISAOrigen" = "cod_sisa")) %>%
-  rename(X_orig = X, Y_orig = Y) %>%
+  rename(X_orig = X, Y_orig = Y, Region_orig = region) %>%
   
   left_join(coords_establecimientos, by = c("EfectorSISADestino" = "cod_sisa")) %>%
-  rename(X_dest = X, Y_dest = Y) %>%
+  rename(X_dest = X, Y_dest = Y, Region_dest = region) %>%
   
   #Limpiamos registros sin coordenadas válidas
   filter(!is.na(X_orig) & !is.na(X_dest)) %>%
   
   # Contamos cuántas derivaciones existen por par Origen-Destino
   # Incluimos las coordenadas y variables categóricas que queramos conservar para el mapa
-  group_by(EfectorOrigen, EfectorSISAOrigen,EfectorDestino,EfectorSISADestino, X_orig, Y_orig, X_dest, Y_dest) %>%
+  group_by(EfectorOrigen, EfectorSISAOrigen,Region_orig, EfectorDestino,EfectorSISADestino, Region_dest, X_orig, Y_orig, X_dest, Y_dest) %>%
   summarise(
     cantidad_solicitudes = n(),
     .groups = "drop"
   )
 
 
-```
-   
-----------------------------------------------------   
 
+```
+  
+Column {data-width=200}
+----------------------------------------------------  
+### Mapa interactivo
 
 ```{r,echo=FALSE}
 #Elegimos la region que se mostrará en el mapa
@@ -277,8 +320,80 @@ selectInput(
 
 ```
 
-row            
+
+
+### Derivaciones origen
+
+```{r,echo=FALSE}
+
+derivaciones_region_orig<- reactive({
+  deriv_con_coords %>%
+    filter(Region_orig == input$region)%>%
+    summarise(total = sum(cantidad_solicitudes, na.rm = TRUE)) %>%
+    pull(total)
+})
+
+output$cant_derivaciones_region_orig <- renderValueBox({
+   valueBox(
+    value = derivaciones_region_orig(),
+    caption = paste("Derivaciones originadas en ", input$region, sep = "\n"),
+    icon="fa-sign-out",
+    color="info"
+  ) 
+})
+
+``` 
+
+```{r}
+valueBoxOutput("cant_derivaciones_region_orig")
+```
+
+### Derivaciones destino
+
+```{r,echo=FALSE}
+
+derivaciones_region_dest<- reactive({
+  deriv_con_coords %>%
+    filter(Region_dest == input$region)%>%
+    summarise(total_dest = sum(cantidad_solicitudes, na.rm = TRUE)) %>%
+    pull(total_dest)
+})
+
+output$cant_derivaciones_region_dest <- renderValueBox({
+   valueBox(
+    value = derivaciones_region_dest(),
+    
+    caption = paste("Derivaciones recibidas en ", input$region, sep = "\n"),
+    icon="fa-sign-in",
+    color="warning"
+  ) 
+})
+```
+
+
+```{r}
+valueBoxOutput("cant_derivaciones_region_dest")
+```
+
+### Promedio de días de espera
+
+```{r, echo=FALSE}
+gauge(
+  value = round(mean((datos_solicitudes$diasPasados))),
+  min = 0,
+  max = 250,
+  sectors = gaugeSectors(
+    success = c(0, 60),
+    warning = c(61, 120),
+    danger = c(121, 250)
+  )
+)
+```
+
+
+Column {data-width=600}
 ----------------------------------------------------
+###
 
 ```{r, echo=FALSE}
 
@@ -354,7 +469,7 @@ output$mapa <- renderLeaflet({
 
   leaflet() %>%
      addTiles('https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png') %>%
-    setView(lng =-70.273561,lat =-37.381230, zoom = 8) %>%  
+    setView(lng =-70.0654592747529,lat =-38.901926288446575, zoom = 7) %>%
     addWMSTiles(
     "https://wms.ign.gob.ar/geoserver/capabaseargenmap/gwc/service/wmts?request=GetCapabilities",
     layers= "Capa base Argenmap",
@@ -403,15 +518,13 @@ leafletOutput("mapa", height =  700)
 
 
 
-```{r}
+```{r,  echo=FALSE}
 #mejoras
 # revisar input debajo agregar box reactivos por la región elegida
 # lineas: cambios para poder diferencialas mejor
-# # clouster para los puntos (o lineas)
-# mejorar gráficos
+# clouster para los puntos (o lineas)
 # agregar listados
-```
-```{r}
+
 # el mapa interactivo responde a "cómo es el transito de pacientes dentro del sistema público de salud dentro de una región y hacia afuera de la misma"
 
 ```
