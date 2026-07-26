@@ -323,7 +323,7 @@ summary(datos_solicitudes)
 
 ```
 
-Obtenemos un listado de cantidad de solicitudes que se **envian** en cada establecimiento y cuál es su promedio en días de espera. 
+Obtenemos un listado de cantidad de solicitudes de derivación que se **envian** en cada establecimiento y cuál es su promedio en días de espera. 
 
 ```{r}
 
@@ -347,7 +347,7 @@ datatable(
 
 ```
 
-Obtenemos un listado de cantidad de solicitudes que se **reciben** en cada efector y cuál es su promedio en días de espera.
+Obtenemos un listado de cantidad de solicitudes de derivación que se **reciben** en cada efector y cuál es su promedio en días de espera.
 
 ```{r}
 solicitdesEstDestino <- summarise(group_by(datos_solicitudes,EfectorDestino,EfectorSISADestino), 

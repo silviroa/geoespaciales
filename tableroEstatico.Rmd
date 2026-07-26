@@ -19,7 +19,6 @@ output:
         
     social: ["menu"]
     source_code: embed
-runtime: shiny
 ---
 
 ```{r setup, include=FALSE}
@@ -222,8 +221,6 @@ ggplot(Datos_agrupados,
 ```
 
 
-
-
 Derivaciones
 ============================================
 
@@ -235,8 +232,6 @@ datos_solicitudes <- read_csv("files/listado-solicitudes_2026.csv")
 datos_solicitudes <- select(datos_solicitudes,-idPrestacion,-idPaciente)
 datos_solicitudes$EfectorSISAOrigen <- as.character(datos_solicitudes$EfectorSISAOrigen)
 datos_solicitudes$EfectorSISADestino <- as.character(datos_solicitudes$EfectorSISADestino)
-
-
 
 datos_solicitudes <- mutate(datos_solicitudes,
                              finalizada=ifelse(estadoActual=="validada" | estadoActual=="rechazada" | estadoActual=="vencida" ,TRUE,FALSE))
@@ -254,8 +249,6 @@ datos_solicitudes <- mutate(datos_solicitudes, diasPasados = ifelse(datos_solici
            round(as.numeric(
                difftime(Sys.time(), datos_solicitudes$fechaInicio, units = "days")))))
 
-
-
 ```
 
 
@@ -264,7 +257,6 @@ datos_solicitudes <- mutate(datos_solicitudes, diasPasados = ifelse(datos_solici
 # Unir establecimientos con regiones: Le pega a cada punto el nombre de la región sanitaria a la que pertenece
 
 establecimientos_con_region <- st_join(establecimientos, regiones, join = st_intersects)
-
 coords <- st_coordinates(establecimientos)
 
 # Extraemos las coordenadas X e Y de todos los establecimientos para poder cruzarlas
@@ -307,16 +299,10 @@ deriv_con_coords <- datos_solicitudes %>%
   
 Column {data-width=200}
 ----------------------------------------------------  
-### Mapa interactivo
 
 ```{r,echo=FALSE}
 #Elegimos la region que se mostrará en el mapa
-selectInput(
-  "region",
-  "Región sanitaria",
-  choices = sort(unique(regiones$region)),
-  selected = ""
-)
+nombre_region_elegida <- "Región Alto Neuquén"
 
 ```
 
@@ -326,53 +312,35 @@ selectInput(
 
 ```{r,echo=FALSE}
 
-derivaciones_region_orig<- reactive({
-  deriv_con_coords %>%
-    filter(Region_orig == input$region)%>%
+derivaciones_region_orig<- deriv_con_coords %>%
+    filter(Region_orig == nombre_region_elegida)%>%
     summarise(total = sum(cantidad_solicitudes, na.rm = TRUE)) %>%
     pull(total)
-})
 
-output$cant_derivaciones_region_orig <- renderValueBox({
-   valueBox(
-    value = derivaciones_region_orig(),
-    caption = paste("Derivaciones originadas en ", input$region, sep = "\n"),
+valueBox(
+    value = derivaciones_region_orig,
+    caption = paste("Derivaciones originadas en ", nombre_region_elegida, sep = "\n"),
     icon="fa-sign-out",
     color="info"
   ) 
-})
-
 ``` 
-
-```{r}
-valueBoxOutput("cant_derivaciones_region_orig")
-```
 
 ### Derivaciones destino
 
 ```{r,echo=FALSE}
 
-derivaciones_region_dest<- reactive({
-  deriv_con_coords %>%
-    filter(Region_dest == input$region)%>%
+derivaciones_region_dest<- deriv_con_coords %>%
+    filter(Region_dest == nombre_region_elegida)%>%
     summarise(total_dest = sum(cantidad_solicitudes, na.rm = TRUE)) %>%
     pull(total_dest)
-})
 
-output$cant_derivaciones_region_dest <- renderValueBox({
-   valueBox(
-    value = derivaciones_region_dest(),
-    
-    caption = paste("Derivaciones recibidas en ", input$region, sep = "\n"),
+valueBox(
+    value = derivaciones_region_dest,
+    caption = paste("Derivaciones recibidas en ", nombre_region_elegida, sep = "\n"),
     icon="fa-sign-in",
     color="warning"
   ) 
-})
-```
 
-
-```{r}
-valueBoxOutput("cant_derivaciones_region_dest")
 ```
 
 ### Promedio de días de espera
@@ -393,126 +361,113 @@ gauge(
 
 Column {data-width=600}
 ----------------------------------------------------
-###
+### Mapa interactivo
 
 ```{r, echo=FALSE}
 
 #filtramos el poligono de la región seleccionada
-region_poligono <- reactive({
-  regiones %>%
-    filter(region == input$region)
-})
+region_poligono <- regiones %>%
+    filter(region == nombre_region_elegida)
 
 #filtra las los establecimientos de la region seleccionada
-establecimientos_region <- reactive({
-  establecimientos_con_region %>%
-    filter(region == input$region)
-})
+establecimientos_region <- establecimientos_con_region %>%
+    filter(region == nombre_region_elegida)
 
 #filtra las derivaciones cuyo origen sean establecimientos de la región seleccionada
-deriv_filtradas <- reactive({
-  deriv_con_coords %>%
+deriv_filtradas <- deriv_con_coords %>%
     filter(EfectorSISAOrigen %in%
-             establecimientos_region()$cod_sisa)
-
-})
-
+             establecimientos_region$cod_sisa)
 
 # FILTRAR DERIVACIONES QUE SE ORIGINAN EN LA REGIÓN SELECCIONADA
 # Filtramos para que el origen de la derivación esté en la lista de establecimientos de la región
-deriv_lineas_sf <- reactive({
-  lineas_deseo_list <- lapply(
-    1:nrow(deriv_filtradas()),
-    function(i){
-      st_linestring(
-        matrix(
-          c(
-            deriv_filtradas()$X_orig[i],
-            deriv_filtradas()$X_dest[i],
-            deriv_filtradas()$Y_orig[i],
-            deriv_filtradas()$Y_dest[i]
-          ),
-          ncol = 2
-        )
-      )
-    })
-  st_sf(
-    deriv_filtradas(),
-    geometry = st_sfc(
-      lineas_deseo_list,
-      crs = st_crs(establecimientos)
-    )
-  )
+deriv_filtradas <- deriv_con_coords %>%
+  filter(EfectorSISAOrigen %in% establecimientos_region$cod_sisa)
+
+
+# OPERACIÓN GEOESPACIAL: CONSTRUIR LAS LÍNEAS DE DESEO (ST_LINESTRING)
+# Generamos una matriz de puntos (Origen -> Destino) para cada fila y la transformamos en geometría de línea
+lineas_deseo_list <- lapply(1:nrow(deriv_filtradas), function(i) {
+  st_linestring(matrix(c(deriv_filtradas$X_orig[i], deriv_filtradas$X_dest[i],
+                         deriv_filtradas$Y_orig[i], deriv_filtradas$Y_dest[i]), 
+                       ncol = 2))
 })
+
+# Convertimos la lista en un objeto espacial sf definitivo
+deriv_lineas_sf <- st_sf(
+  deriv_filtradas,
+  geometry = st_sfc(lineas_deseo_list, crs = st_crs(establecimientos))
+)
 
 
 # Cartelito interactivo para las líneas de derivación
-deriv_lineas_geo <- reactive({ deriv_lineas_sf() %>%
+deriv_lineas_geo <- deriv_lineas_sf %>%
   mutate(popup_texto = paste0(
     "<strong>Flujo de Derivación</strong><br/>",
     "<strong>Origen SISA:</strong> ", EfectorOrigen, "<br/>",
     "<strong>Destino SISA:</strong> ", EfectorDestino, "<br/>",
     "<strong>Total Solicitudes:</strong> <span style='color:red;'>", cantidad_solicitudes, "</span>"
   ))
-})
 
 # Cartelito interactivo para cada punto (establecimiento)
-establecimientos_region_geo <- reactive({ establecimientos_region() %>%
+establecimientos_region_geo <-  establecimientos_region %>%
   mutate(popup_texto = paste0(
     "<strong>Establecimiento:</strong> ", fna, "<br/>",
     "<strong>Tipo:</strong> ", gna, "<br/>",
     "<strong>Código SISA:</strong> ", cod_sisa
   ))
-})
 
-output$mapa <- renderLeaflet({
-
-  leaflet() %>%
-     addTiles('https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png') %>%
-    setView(lng =-70.0654592747529,lat =-38.901926288446575, zoom = 7) %>%
-    addWMSTiles(
+mapa_interactivo <- leaflet() %>%
+  # Añadir un mapa base (Fondo gris claro ideal para resaltar datos temáticos)
+ addTiles('https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png') %>%
+  setView(lng =-70.273561,lat =-37.381230, zoom = 8) %>%  
+  addWMSTiles(
     "https://wms.ign.gob.ar/geoserver/capabaseargenmap/gwc/service/wmts?request=GetCapabilities",
     layers= "Capa base Argenmap",
     options = WMSTileOptions(format = "image/png", transparent = TRUE),
     tileOptions(tms = TRUE),
     attribution = '<a href="http://www.ign.gob.ar/AreaServicios/Argenmap/IntroduccionV2" target="_blank">Instituto Geográfico Nacional</a> + <a href="http://www.osm.org/copyright" target="_blank">OpenStreetMap</a>') %>%
   
-    addPolygons(
-      data = region_poligono(),
-      fillColor = "orange",
-      fillOpacity = 0.3,
-      color = "#666666",
-       weight = 1.5,
-      group = "region"
-    ) %>%
+  # Capa 1: Dibujar el polígono de la región sanitaria seleccionada
+  addPolygons(
+    data = region_poligono,
+    fillColor = "orange",
+    fillOpacity = 0.3,
+    color = "#666666",
+    weight = 1.5,
+    group = "region"
+  ) %>%
+  
+  # Capa 2: Dibujar las Líneas de Deseo (Flujos)
+  addPolylines(
+    data = deriv_lineas_geo,
+    # El grosor físico en la pantalla depende de la cantidad de solicitudes
+    weight = ~sqrt(cantidad_solicitudes) * 1.5, 
+    color = "#1f78b4",
+    opacity = 0.7,
+    popup = ~popup_texto,
+    group = "Líneas de Derivación"
+  ) %>%
+  
+  # Capa 3: Dibujar los Establecimientos (Puntos)
+  addCircleMarkers(
+    data = establecimientos_region_geo,
+    radius = 6,
+    fillColor = "#e31a1c",
+    fillOpacity = 0.9,
+    color = "#ffffff",
+    weight = 1,
+    popup = ~popup_texto,
+    group = "Establecimientos"
+  ) %>%
+  
+  # Añadir un control para prender y apagar capas en el mapa
+  addLayersControl(
+    overlayGroups = c("Región Sanitaria", "Líneas de Derivación", "Establecimientos"),
+    options = layersControlOptions(collapsed = FALSE)
+  )
 
-    addPolylines(
-      data = deriv_lineas_geo(),
-         # El grosor físico en la pantalla depende de la cantidad de solicitudes
-      weight = ~sqrt(cantidad_solicitudes) * 1.5, 
-      color = "#1f78b4",
-      opacity = 0.7,
-   # highlightOptions = highlightOptions(weight = 5, color = "#ff7f00", bringToFront = TRUE),
-      popup = ~popup_texto,
-      group = "Líneas de Derivación"
-    ) %>%
-
-    addCircleMarkers(
-      data = establecimientos_region_geo(),
-      radius = 6,
-      fillColor = "#e31a1c",
-      fillOpacity = 0.9,
-      color = "#ffffff",
-      weight = 1,
-      popup = ~popup_texto,
-      group = "Establecimientos"
-    )
-
-})
-
-
-# 4. VISUALIZAR EL MAPA EN RSTUDIO
-leafletOutput("mapa", height =  700)
+# VISUALIZAR EL MAPA EN RSTUDIO
+mapa_interactivo
 
 ```
 
@@ -601,4 +556,3 @@ datatable(
   formatStyle(columns = 1:4, fontSize = '85%')
 
 ```
-
