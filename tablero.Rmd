@@ -1,26 +1,34 @@
+
 ---
 title: "Sistema de Referencia y contrareferencia"
-output: 
+output:
   flexdashboard::flex_dashboard:
     theme:
-      bg: "#F0FDFA"
-      fg: "#1E2939" 
-      primary: "#93E5D5"
+      bg: '#F0FDFA'
+      fg: '#1E2939'
+      primary: '#93E5D5'
       base_font:
         google: Prompt
       code_font:
         google: JetBrains Mono
     orientation: columns
     vertical_layout: fill
-    
     navbar:
-      - title: "Reporte"
-        href: "./reportes/PracticoN1_Ramos_Roa.html"
-        
-    social: ["menu"]
+    - title: Reporte
+      href: reportes/PracticoN1_Ramos_Roa.html
+    social: menu
     source_code: embed
 runtime: shiny
+resource_files:
+- reportes/PracticoN1_Ramos_Roa.Rmd
+- reportes/PracticoN1_Ramos_Roa.html
 ---
+```{r, include=FALSE}
+shiny::addResourcePath(
+  prefix = "reportes",
+  directoryPath = normalizePath("reportes")
+)
+```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -241,7 +249,7 @@ datos_solicitudes$EfectorSISADestino <- as.character(datos_solicitudes$EfectorSI
 datos_solicitudes <- mutate(datos_solicitudes,
                              finalizada=ifelse(estadoActual=="validada" | estadoActual=="rechazada" | estadoActual=="vencida" ,TRUE,FALSE))
 
-# Vamos a calcular el tiempo de demora de la solicitudes en días:
+# Vamos a calcular el tiempo de demora de la derivaciones en días:
 # Para las finalizadas el tiempo de demora es la diferencia entre la fecha de inicio y la fecha del estado actual
 # Para las que no estan finalizadas el tiempo se calcula con fecha de inicio y la fecha actual
 
@@ -365,7 +373,7 @@ output$cant_derivaciones_region_dest <- renderValueBox({
     
     caption = paste("Derivaciones recibidas en ", input$region, sep = "\n"),
     icon="fa-sign-in",
-    color="warning"
+    # color="warning"
   ) 
 })
 ```
@@ -375,7 +383,7 @@ output$cant_derivaciones_region_dest <- renderValueBox({
 valueBoxOutput("cant_derivaciones_region_dest")
 ```
 
-### Promedio de días de espera
+### Promedio de días de espera provincial
 
 ```{r, echo=FALSE}
 gauge(
@@ -389,6 +397,7 @@ gauge(
   )
 )
 ```
+
 
 
 Column {data-width=600}
@@ -452,7 +461,7 @@ deriv_lineas_geo <- reactive({ deriv_lineas_sf() %>%
     "<strong>Flujo de Derivación</strong><br/>",
     "<strong>Origen SISA:</strong> ", EfectorOrigen, "<br/>",
     "<strong>Destino SISA:</strong> ", EfectorDestino, "<br/>",
-    "<strong>Total Solicitudes:</strong> <span style='color:red;'>", cantidad_solicitudes, "</span>"
+    "<strong>Total Derivaciones:</strong> <span style='color:red;'>", cantidad_solicitudes, "</span>"
   ))
 })
 
@@ -544,7 +553,7 @@ solicitdesEstOrigen <- summarise(group_by(datos_solicitudes,EfectorOrigen, Efect
 
 datatable(
   solicitdesEstOrigen,
-  colnames = c("Establecimiento Origen", "Código SISA (REFES)", "Cantidad de Solicitudes", "Promedio de Espera (Días)"),
+  colnames = c("Establecimiento Origen", "Código SISA (REFES)", "Cantidad de Derivaciones", "Promedio de Espera (Días)"),
   options = list(
     pageLength = 25,       # Cantidad de filas a mostrar por página
     autoWidth = FALSE,      # Ajuste automático del ancho de columnas
@@ -566,7 +575,7 @@ solicitdesEstDestino <- summarise(group_by(datos_solicitudes,EfectorDestino,Efec
                                  promedio_espera = round(mean(diasPasados,na.rm = TRUE)))
 datatable(
   solicitdesEstDestino,
-  colnames = c("Establecimiento Destino", "Código SISA (REFES)", "Cantidad de Solicitudes", "Promedio de Espera (Días)"),
+  colnames = c("Establecimiento Destino", "Código SISA (REFES)", "Cantidad de Derivaciones", "Promedio de Espera (Días)"),
   options = list(
     pageLength = 25,       # Cantidad de filas a mostrar por página
     autoWidth = FALSE,      # Ajuste automático del ancho de columnas
@@ -579,7 +588,7 @@ datatable(
   formatStyle(columns = 1:4, fontSize = '85%')
 ```
 
-### Solicitudes por tipo de prestación
+### Derivaciones por tipo de prestación
 
 ```{r, echo=FALSE}
 

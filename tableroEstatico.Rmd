@@ -343,7 +343,9 @@ valueBox(
 
 ```
 
-### Promedio de días de espera
+
+
+### Promedio de días de espera provincial
 
 ```{r, echo=FALSE}
 gauge(
@@ -357,6 +359,7 @@ gauge(
   )
 )
 ```
+###
 
 
 Column {data-width=600}
